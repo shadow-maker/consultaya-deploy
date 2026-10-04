@@ -4,6 +4,9 @@
 # escuchan en el 8000 de la red interna de Docker. Cada servicio lee su configuración
 # de env/<servicio>.env (copiar desde env/<servicio>.env.example; nunca se commitea).
 #
+# Seguridad: el puerto 80 queda abierto en la EC2 y se restringe con el security group
+# (inbound 80 solo desde la prefix list de CloudFront; ver docs/06-despliegue-aws.md).
+#
 # Uso: docker compose up -d --build
 
 name: consultaya

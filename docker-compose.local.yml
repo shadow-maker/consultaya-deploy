@@ -3,7 +3,7 @@
 # Se usa SIEMPRE junto con docker-compose.yml:
 #   docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
 #
-# - nginx en http://localhost:8080 y sirve también el build del frontend en "/".
+# - nginx en http://localhost:8080 (publicado solo en 127.0.0.1, uso local) y sirve también el build del frontend en "/".
 # - Cada servicio usa env/local/<servicio>.env, que apunta al Postgres del host
 #   mediante host.docker.internal:5432.
 # Requiere Compose >= 2.24 (etiqueta !override).
@@ -11,7 +11,7 @@
 services:
   nginx:
     ports: !override
-      - "8080:80"
+      - "127.0.0.1:8080:80"
     volumes: !override
       - ./nginx/local.conf:/etc/nginx/conf.d/default.conf:ro
       - ../consultaya-frontend/dist:/usr/share/nginx/html:ro

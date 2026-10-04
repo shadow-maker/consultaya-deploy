@@ -8,7 +8,8 @@
 #                  -f docker-compose.localdb.yml up -d --build
 #
 # El contenedor crea las bases consultaya_* (scripts/localdb-init.sql) con el usuario
-# "ca" sin password (solo accesible desde la Mac y la red de Docker). Los servicios
+# "ca" sin password (auth "trust"). El puerto se publica SOLO en 127.0.0.1: es accesible
+# desde la propia Mac y desde la red interna de Docker, no desde la red local (Wi-Fi). Los servicios
 # reciben DATABASE_URL apuntando a este contenedor (la variable de "environment"
 # tiene prioridad sobre env_file).
 # Desde la Mac: postgresql+psycopg://ca@localhost:55432/<base>
@@ -22,7 +23,7 @@ services:
       POSTGRES_DB: postgres
       POSTGRES_HOST_AUTH_METHOD: trust
     ports:
-      - "55432:5432"
+      - "127.0.0.1:55432:5432"
     volumes:
       - consultaya_localdb:/var/lib/postgresql
       - ./scripts/localdb-init.sql:/docker-entrypoint-initdb.d/10-consultaya.sql:ro

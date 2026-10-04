@@ -34,6 +34,8 @@ Abre http://localhost:5173 (cuenta demo `demo@consultaya.pe` / `demo1234`). Logs
 
 ## Modo Docker (paridad con la EC2)
 
+En local, nginx (`8080`) y el Postgres del plan B (`55432`) se publican solo en `127.0.0.1`: no son accesibles desde la red (Wi-Fi).
+
 ```bash
 scripts/docker-local.sh up        # http://localhost:8080
 scripts/docker-local.sh status
@@ -75,7 +77,7 @@ Cada test se llama como su escenario (`HU1-E1` … `HU5-E2`). Las cuentas nuevas
 Resumen; ver `../docs/06-despliegue-aws.md` para cada paso de consola (región `us-east-1`, AWS Academy Learner Lab).
 
 1. **Valores** (fuera de git): `JWT_SECRET` (`openssl rand -hex 48`) y una contraseña por servicio y para RDS (`openssl rand -base64 24 | tr -d '/+='`).
-2. **Security groups**: EC2 con TCP 80 solo desde la prefix list de CloudFront (`com.amazonaws.global.cloudfront.origin-facing`) y 22 desde tu IP; RDS con 5432 solo desde el SG de la EC2.
+2. **Security groups** (el compose de producción publica `80:80`; lo restringe el SG, nunca lo abras a `0.0.0.0/0`): EC2 con TCP 80 solo desde la prefix list de CloudFront (`com.amazonaws.global.cloudfront.origin-facing`) y 22 desde tu IP; RDS con 5432 solo desde el SG de la EC2.
 3. **RDS PostgreSQL** `db.t3.micro`, privada.
 4. **EC2** `t3.small` Amazon Linux 2023, `LabInstanceProfile`, user data = `scripts/bootstrap-ec2.sh`, Elastic IP.
 5. **Código en la EC2** (`/opt/consultaya`): clonar `consultaya-deploy`, `consultaya-usuarios`, `consultaya-lecciones`, `consultaya-progreso` en la misma carpeta.
