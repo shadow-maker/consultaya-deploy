@@ -26,6 +26,8 @@ scripts/dev-status.sh      # /health de cada servicio
 scripts/dev-down.sh        # detiene lo que arrancó dev-up.sh
 ```
 
+`dev-up.sh` resuelve `uv` solo: si el shim de pyenv falla dentro de los repos (`pyenv: uv: command not found`), usa `~/.pyenv/versions/*/bin/uv`.
+
 Abre http://localhost:5173 (cuenta demo `demo@consultaya.pe` / `demo1234`). Logs y PIDs en `.logs/`. `dev-up.sh --no-seed` omite los seeds y `--no-front` no arranca Vite.
 
 `scripts/db-local-init.sh` crea (solo si no existen) las 6 bases `consultaya_{usuarios,lecciones,progreso}` y sus `_test`. Nunca borra nada ni toca otras bases.

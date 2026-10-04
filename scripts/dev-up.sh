@@ -85,6 +85,26 @@ arrancar() { # etiqueta puerto directorio url-health comando...
   echo "  $etiqueta arrancando (PID $(cat "$LOGS/$etiqueta.pid"), puerto $puerto)."
 }
 
+# uv: en esta Mac suele ser un shim de pyenv que falla dentro de repos con .python-version.
+# Se prueba `uv --version` dentro de un repo de servicio y, si falla, se antepone al PATH
+# el binario real de ~/.pyenv/versions/*/bin/uv.
+resolver_uv() {
+  local probe="$WORKSPACE/consultaya-usuarios" cand
+  [ -d "$probe" ] || probe="$DEPLOY_DIR"
+  if (cd "$probe" && uv --version >/dev/null 2>&1); then return 0; fi
+  for cand in "$HOME"/.pyenv/versions/*/bin/uv; do
+    if [ -x "$cand" ] && (cd "$probe" && "$cand" --version >/dev/null 2>&1); then
+      PATH="$(dirname "$cand"):$PATH"
+      export PATH
+      echo "  uv resuelto en $cand"
+      return 0
+    fi
+  done
+  echo "No se encontró un uv funcional (ni en el PATH ni en ~/.pyenv/versions/*/bin/uv)." >&2
+  return 1
+}
+resolver_uv
+
 # 1) Bases
 log "Bases de datos locales"
 "$SCRIPTS_DIR/db-local-init.sh"
