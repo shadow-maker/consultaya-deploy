@@ -1,0 +1,18 @@
+{
+  "name": "consultaya-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Pruebas e2e de ConsultaYa (Playwright): un test por escenario Gherkin (HU1-E1 … HU5-E2).",
+  "scripts": {
+    "test": "playwright test",
+    "test:list": "playwright test --list",
+    "test:ui": "playwright test --ui",
+    "typecheck": "tsc --noEmit",
+    "install:browsers": "playwright install chromium"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  }
+}
