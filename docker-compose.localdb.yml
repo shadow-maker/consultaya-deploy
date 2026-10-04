@@ -1,0 +1,59 @@
+# ConsultaYa · plan B: Postgres en un contenedor (puerto 55432 del host).
+#
+# Úsalo solo si los contenedores no pueden conectarse al Postgres.app del host
+# (por ejemplo, "Postgres.app failed to verify trust authentication"). NO se modifica
+# la configuración del Postgres del host.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.local.yml \
+#                  -f docker-compose.localdb.yml up -d --build
+#
+# El contenedor crea las bases consultaya_* (scripts/localdb-init.sql) con el usuario
+# "ca" sin password (solo accesible desde la Mac y la red de Docker). Los servicios
+# reciben DATABASE_URL apuntando a este contenedor (la variable de "environment"
+# tiene prioridad sobre env_file).
+# Desde la Mac: postgresql+psycopg://ca@localhost:55432/<base>
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ca
+      POSTGRES_DB: postgres
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "55432:5432"
+    volumes:
+      - consultaya_localdb:/var/lib/postgresql
+      - ./scripts/localdb-init.sql:/docker-entrypoint-initdb.d/10-consultaya.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ca -d postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  usuarios:
+    environment:
+      DATABASE_URL: postgresql+psycopg://ca@postgres:5432/consultaya_usuarios
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  lecciones:
+    environment:
+      DATABASE_URL: postgresql+psycopg://ca@postgres:5432/consultaya_lecciones
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  progreso:
+    environment:
+      DATABASE_URL: postgresql+psycopg://ca@postgres:5432/consultaya_progreso
+    depends_on:
+      postgres:
+        condition: service_healthy
+      lecciones:
+        condition: service_started
+
+volumes:
+  consultaya_localdb:
