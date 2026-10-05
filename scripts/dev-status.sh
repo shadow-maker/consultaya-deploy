@@ -27,6 +27,7 @@ fallos=0
 estado() { # nombre url obligatorio(1|0)
   local nombre="$1" url="$2" obligatorio="$3" cuerpo
   if cuerpo="$(curl -fsS --max-time 3 "$url" 2>/dev/null)"; then
+    cuerpo="${cuerpo%%$'\n'*}"
     printf '  %-10s OK       %s\n' "$nombre" "${cuerpo:0:80}"
   else
     printf '  %-10s caído    %s\n' "$nombre" "$url"
