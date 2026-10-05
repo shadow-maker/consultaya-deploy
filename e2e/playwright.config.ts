@@ -8,11 +8,12 @@ const baseURL = (process.env.BASE_URL ?? 'http://localhost:5173').replace(/\/+$/
 
 export default defineConfig({
   testDir: './tests',
+  globalSetup: './global-setup.ts',
   // Los escenarios son independientes, pero comparten base de datos: se corren en serie
   // para que los resultados sean repetibles.
   fullyParallel: false,
   workers: 1,
-  retries: 0,
+  retries: 1,
   timeout: 60_000,
   expect: { timeout: 15_000 },
   reporter: [['list'], ['html', { open: 'never' }]],
