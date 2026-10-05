@@ -26,6 +26,8 @@ scripts/dev-status.sh      # /health de cada servicio
 scripts/dev-down.sh        # detiene lo que arrancó dev-up.sh
 ```
 
+**Modo en primer plano** (`scripts/dev-up.sh --foreground`): hace los mismos pasos previos, pero los 3 `uvicorn` (con `--reload`) y Vite quedan atados a la terminal. La salida de los 4 se ve en vivo con un prefijo por servicio (`[usuarios]`, `[lecciones]`, `[progreso]`, `[frontend]`, con color si la terminal lo soporta) y además se sigue escribiendo en `.logs/<servicio>.log`. `Ctrl+C`, `SIGTERM` o cerrar la terminal detienen los 4 procesos y todos sus hijos (solo los que arrancó el propio script) y borran los `.pid`. Si un servicio muere solo, se avisa con su nombre y código de salida y se detienen los demás. Si los puertos 8001/8002/8003/5173 ya están ocupados (por ejemplo, por un `dev-up.sh` en segundo plano), aborta y sugiere `scripts/dev-down.sh`.
+
 `dev-up.sh` resuelve `uv` solo: si el shim de pyenv falla dentro de los repos (`pyenv: uv: command not found`), usa `~/.pyenv/versions/*/bin/uv`.
 
 Abre http://localhost:5173 (cuenta demo `demo@consultaya.pe` / `demo1234`). Logs y PIDs en `.logs/`. `dev-up.sh --no-seed` omite los seeds y `--no-front` no arranca Vite.
