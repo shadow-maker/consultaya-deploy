@@ -6,16 +6,16 @@ uso() {
   cat <<'AYUDA'
 Uso: scripts/db-local-init.sh [--help]
 
-Crea (solo si no existen) las bases del Postgres local:
+Crea (solo si no existen) las bases del PostgreSQL local:
   consultaya_usuarios   consultaya_usuarios_test
   consultaya_lecciones  consultaya_lecciones_test
   consultaya_progreso   consultaya_progreso_test
 Imprime qué creó y qué ya existía. No toca ninguna otra base ni borra nada.
 
-Variables opcionales (valores por defecto entre paréntesis):
-  DB_HOST (localhost)  DB_PORT (5432)  DB_USER (ca)
-Ejemplo con el Postgres del plan B (docker-compose.localdb.yml):
+Conexión: lee DB_HOST, DB_PORT, DB_USER y DB_PASSWORD de consultaya-deploy/.env
+(copia .env.example a .env). Las variables de entorno con esos nombres tienen prioridad:
   DB_PORT=55432 scripts/db-local-init.sh
+Si hay contraseña se pasa a psql con PGPASSWORD y nunca se imprime.
 AYUDA
 }
 
@@ -25,19 +25,23 @@ case "${1:-}" in
   *) echo "Opción desconocida: $1" >&2; uso >&2; exit 2 ;;
 esac
 
-DB_HOST="${DB_HOST:-localhost}"
-DB_PORT="${DB_PORT:-5432}"
-DB_USER="${DB_USER:-ca}"
+SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=lib/entorno.sh
+source "$SCRIPTS_DIR/lib/entorno.sh"
+entorno_cargar
 
-# Postgres.app no siempre deja psql en el PATH.
+# psql: primero el PATH; si no está, ubicaciones habituales de las instalaciones de PostgreSQL.
 if ! command -v psql >/dev/null 2>&1; then
-  PG_APP_BIN="/Applications/Postgres.app/Contents/Versions/latest/bin"
-  if [ -x "$PG_APP_BIN/psql" ]; then
-    PATH="$PG_APP_BIN:$PATH"
-  else
-    echo "No se encontró psql. Instala/abre Postgres.app o agrega psql al PATH." >&2
-    exit 1
-  fi
+  for dir in \
+    /Applications/Postgres.app/Contents/Versions/latest/bin \
+    /opt/homebrew/opt/postgresql*/bin /usr/local/opt/postgresql*/bin \
+    /usr/lib/postgresql/*/bin /usr/pgsql-*/bin; do
+    if [ -x "$dir/psql" ]; then PATH="$dir:$PATH"; break; fi
+  done
+fi
+if ! command -v psql >/dev/null 2>&1; then
+  echo "No se encontró psql. Instala el cliente de PostgreSQL (ver README) o agrégalo al PATH." >&2
+  exit 1
 fi
 
 BASES=(
@@ -46,11 +50,12 @@ BASES=(
   consultaya_progreso consultaya_progreso_test
 )
 
-# Siempre contra la base de mantenimiento "postgres"; solo se consulta pg_database.
+# Siempre contra la base de mantenimiento "postgres"; solo se consulta pg_database y se crean bases.
 psql_admin() { psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d postgres -v ON_ERROR_STOP=1 -X -Atq "$@"; }
 
 if ! psql_admin -c "select 1" >/dev/null; then
-  echo "No se pudo conectar a Postgres en $DB_HOST:$DB_PORT como $DB_USER." >&2
+  echo "No se pudo conectar a PostgreSQL en $DB_HOST:$DB_PORT como $DB_USER." >&2
+  echo "Revisa DB_HOST, DB_PORT, DB_USER y DB_PASSWORD en consultaya-deploy/.env." >&2
   exit 1
 fi
 
@@ -64,7 +69,7 @@ for base in "${BASES[@]}"; do
     echo "  ya existía: $base"
     existentes=$((existentes + 1))
   else
-    createdb -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" "$base"
+    psql_admin -c "CREATE DATABASE \"$base\"" >/dev/null
     echo "  creada:     $base"
     creadas=$((creadas + 1))
   fi

@@ -1,11 +1,11 @@
-# ConsultaYa · override para correr el modo Docker en la Mac (paridad con la EC2).
+# ConsultaYa · override para correr el modo Docker en tu máquina (paridad con la EC2).
 #
 # Se usa SIEMPRE junto con docker-compose.yml:
 #   docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
 #
 # - nginx en http://localhost:8080 (publicado solo en 127.0.0.1, uso local) y sirve también el build del frontend en "/".
-# - Cada servicio usa env/local/<servicio>.env, que apunta al Postgres del host
-#   mediante host.docker.internal:5432.
+# - Cada servicio usa env/local/<servicio>.env (lo genera scripts/docker-local.sh desde tu .env),
+#   que apunta al PostgreSQL de tu máquina mediante host.docker.internal.
 # Requiere Compose >= 2.24 (etiqueta !override).
 
 services:

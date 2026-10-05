@@ -8,8 +8,12 @@ uso() {
 Uso: scripts/dev-up.sh [--foreground] [--no-seed] [--no-front] [--help]
 
 En orden:
+  0. exige consultaya-deploy/.env (copia .env.example a .env y ajusta tu usuario y contraseña
+     de PostgreSQL); si falta, aborta con instrucciones
   1. db-local-init.sh (crea las bases consultaya_* que falten)
-  2. por servicio: uv sync + alembic upgrade head (usuarios 8001, lecciones 8002, progreso 8003)
+  2. por servicio: si no tiene .env, lo genera desde su .env.example con los datos de
+     deploy/.env (si ya existe, no se toca); uv sync + alembic upgrade head
+     (usuarios 8001, lecciones 8002, progreso 8003)
   3. seeds: lecciones (seed.py), usuarios y progreso (seed_demo.py)
   4. uvicorn de cada servicio (por defecto en segundo plano; logs y PIDs en .logs/)
   5. espera a que cada /health responda
@@ -51,6 +55,11 @@ DEPLOY_DIR="$(cd "$SCRIPTS_DIR/.." && pwd)"
 WORKSPACE="$(cd "$DEPLOY_DIR/.." && pwd)"
 LOGS="$DEPLOY_DIR/.logs"
 mkdir -p "$LOGS"
+
+# Configuración local: consultaya-deploy/.env (DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, JWT_SECRET).
+# shellcheck source=lib/entorno.sh
+source "$SCRIPTS_DIR/lib/entorno.sh"
+entorno_cargar || exit 1
 
 # servicio:puerto
 SERVICIOS=("usuarios:8001" "lecciones:8002" "progreso:8003")
@@ -218,9 +227,9 @@ if [ "$FOREGROUND" = "1" ]; then
   trap 'exit 129' HUP
 fi
 
-# uv: en esta Mac suele ser un shim de pyenv que falla dentro de repos con .python-version.
-# Se prueba `uv --version` dentro de un repo de servicio y, si falla, se antepone al PATH
-# el binario real de ~/.pyenv/versions/*/bin/uv.
+# uv: a veces `uv` es un shim (p. ej. de pyenv) que falla dentro de repos con .python-version.
+# Se prueba `uv --version` dentro de un repo de servicio y, si falla, se busca un uv real en
+# ~/.pyenv/versions/*/bin como respaldo.
 resolver_uv() {
   local probe="$WORKSPACE/consultaya-usuarios" cand
   [ -d "$probe" ] || probe="$DEPLOY_DIR"
@@ -233,7 +242,7 @@ resolver_uv() {
       return 0
     fi
   done
-  echo "No se encontró un uv funcional (ni en el PATH ni en ~/.pyenv/versions/*/bin/uv)." >&2
+  echo "No se encontró un uv funcional. Instálalo (ver README, \"Primeros pasos\") y vuelve a intentar." >&2
   return 1
 }
 resolver_uv
@@ -256,9 +265,15 @@ for item in "${SERVICIOS[@]}"; do
   fi
   ACTIVOS+=("$item")
   echo "-- $svc"
-  if [ ! -f "$dir/.env" ] && [ -f "$dir/.env.example" ]; then
-    cp "$dir/.env.example" "$dir/.env"
-    echo "  .env creado desde .env.example"
+  # Si el servicio no tiene .env se genera desde su .env.example con los datos de deploy/.env.
+  # Si ya existe NO se toca.
+  if [ ! -f "$dir/.env" ]; then
+    if [ -f "$dir/.env.example" ]; then
+      entorno_generar "$dir/.env.example" "$dir/.env" "$svc" "$DB_HOST"
+      echo "  .env generado desde .env.example (con los datos de consultaya-deploy/.env)"
+    else
+      aviso "consultaya-$svc no tiene .env ni .env.example."
+    fi
   fi
   (cd "$dir" && uv sync && uv run alembic upgrade head)
 done

@@ -13,20 +13,23 @@ Uso: scripts/docker-local.sh <up|seed|status|down> [opciones]
   down    detiene y elimina los contenedores (el volumen del plan B se conserva)
 
 Opciones de up:
-  --db host        usa el Postgres del host (host.docker.internal:5432)
-  --db container   plan B: Postgres en contenedor (puerto 55432)
-  --db auto        (por defecto) prueba el host y, si falla, usa el plan B y lo avisa
+  --db host        usa el PostgreSQL de tu máquina (host.docker.internal:DB_PORT)
+  --db container   plan B: PostgreSQL en contenedor (puerto 55432, usuario/contraseña "consultaya")
+  --db auto        (por defecto) prueba tu PostgreSQL y, si falla, usa el plan B y lo avisa
   --build-front    fuerza `npm run build` del frontend
   --no-seed        no corre los seeds al terminar
 Opciones de down:
   --volumes        además borra el volumen del Postgres del plan B (solo bases consultaya_*)
 
-Nunca se modifica la configuración del Postgres del host.
+Configuración: lee consultaya-deploy/.env (copia .env.example a .env). A partir de ahí genera
+env/local/<servicio>.env en cada `up`. Nunca se modifica la configuración de tu PostgreSQL.
 AYUDA
 }
 
 SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DEPLOY_DIR="$(cd "$SCRIPTS_DIR/.." && pwd)"
+# shellcheck source=lib/entorno.sh
+source "$SCRIPTS_DIR/lib/entorno.sh"
 WORKSPACE="$(cd "$DEPLOY_DIR/.." && pwd)"
 FRONT_DIR="$WORKSPACE/consultaya-frontend"
 BASE=(-f docker-compose.yml -f docker-compose.local.yml)
@@ -87,27 +90,27 @@ hacer_seeds() {
 
 case "$CMD" in
   up)
-    echo "==> env/local/*.env"
+    entorno_cargar || exit 1
+    echo "==> env/local/*.env (generados desde consultaya-deploy/.env)"
     for svc in usuarios lecciones progreso; do
-      if [ ! -f "env/local/$svc.env" ]; then
-        cp "env/local/$svc.env.example" "env/local/$svc.env"
-        echo "  creado env/local/$svc.env"
-      fi
+      entorno_generar "env/local/$svc.env.example" "env/local/$svc.env" "$svc" host.docker.internal sin_test
+      echo "  generado env/local/$svc.env"
     done
 
-    echo "==> Conexión de un contenedor al Postgres del host"
+    echo "==> Conexión de un contenedor a tu PostgreSQL (host.docker.internal:$DB_PORT)"
     if [ "$DB_MODE" = "auto" ] || [ "$DB_MODE" = "host" ]; then
-      if docker run --rm postgres:18-alpine psql -h host.docker.internal -U ca -d postgres -Atc "select 1" >/dev/null 2>.logs/docker-pg-test.log; then
-        echo "  OK: los contenedores llegan al Postgres del host."
+      # PGPASSWORD (si hay) se pasa por nombre: el valor no se imprime.
+      if docker run --rm -e PGPASSWORD postgres:18-alpine psql -h host.docker.internal -p "$DB_PORT" -U "$DB_USER" -d postgres -Atc "select 1" >/dev/null 2>.logs/docker-pg-test.log; then
+        echo "  OK: los contenedores llegan a tu PostgreSQL."
         DB_MODE="host"
       else
         echo "  FALLÓ (detalle en .logs/docker-pg-test.log):" >&2
         sed 's/^/    /' .logs/docker-pg-test.log >&2
         if [ "$DB_MODE" = "host" ]; then
-          echo "  No se toca la configuración de Postgres. Usa --db container (plan B)." >&2
+          echo "  No se toca la configuración de PostgreSQL. Usa --db container (plan B)." >&2
           exit 1
         fi
-        echo "  AVISO: se usa el plan B (Postgres en contenedor, puerto 55432). No se cambió el Postgres del host." >&2
+        echo "  AVISO: se usa el plan B (PostgreSQL en contenedor, puerto 55432). No se cambió tu PostgreSQL." >&2
         DB_MODE="container"
       fi
     fi

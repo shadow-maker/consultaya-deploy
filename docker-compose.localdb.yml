@@ -1,55 +1,56 @@
-# ConsultaYa · plan B: Postgres en un contenedor (puerto 55432 del host).
+# ConsultaYa · plan B: PostgreSQL en un contenedor (puerto 55432 de tu máquina).
 #
-# Úsalo solo si los contenedores no pueden conectarse al Postgres.app del host
-# (por ejemplo, "Postgres.app failed to verify trust authentication"). NO se modifica
-# la configuración del Postgres del host.
+# Úsalo si los contenedores no pueden conectarse al PostgreSQL instalado en tu máquina
+# (autenticación o permisos, o Linux sin acceso desde la red de Docker). NO modifica la
+# configuración de tu PostgreSQL.
 #
 #   docker compose -f docker-compose.yml -f docker-compose.local.yml \
 #                  -f docker-compose.localdb.yml up -d --build
+#   (o: scripts/docker-local.sh up --db container)
 #
-# El contenedor crea las bases consultaya_* (scripts/localdb-init.sql) con el usuario
-# "ca" sin password (auth "trust"). El puerto se publica SOLO en 127.0.0.1: es accesible
-# desde la propia Mac y desde la red interna de Docker, no desde la red local (Wi-Fi). Los servicios
-# reciben DATABASE_URL apuntando a este contenedor (la variable de "environment"
-# tiene prioridad sobre env_file).
-# Desde la Mac: postgresql+psycopg://ca@localhost:55432/<base>
+# Credenciales propias del contenedor (solo desarrollo): usuario "consultaya", contraseña
+# "consultaya". El puerto se publica SOLO en 127.0.0.1: es accesible desde tu propia máquina y
+# desde la red interna de Docker, no desde la red local (Wi-Fi). El contenedor crea las bases
+# consultaya_* (scripts/localdb-init.sql) y los servicios reciben DATABASE_URL apuntando a él
+# (la variable de "environment" tiene prioridad sobre env_file).
+# Desde tu máquina: postgresql://consultaya:consultaya@localhost:55432/<base>
 
 services:
   postgres:
     image: postgres:18-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ca
+      POSTGRES_USER: consultaya
+      POSTGRES_PASSWORD: consultaya
       POSTGRES_DB: postgres
-      POSTGRES_HOST_AUTH_METHOD: trust
     ports:
       - "127.0.0.1:55432:5432"
     volumes:
       - consultaya_localdb:/var/lib/postgresql
       - ./scripts/localdb-init.sql:/docker-entrypoint-initdb.d/10-consultaya.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ca -d postgres"]
+      test: ["CMD-SHELL", "pg_isready -U consultaya -d postgres"]
       interval: 5s
       timeout: 3s
       retries: 20
 
   usuarios:
     environment:
-      DATABASE_URL: postgresql+psycopg://ca@postgres:5432/consultaya_usuarios
+      DATABASE_URL: postgresql+psycopg://consultaya:consultaya@postgres:5432/consultaya_usuarios
     depends_on:
       postgres:
         condition: service_healthy
 
   lecciones:
     environment:
-      DATABASE_URL: postgresql+psycopg://ca@postgres:5432/consultaya_lecciones
+      DATABASE_URL: postgresql+psycopg://consultaya:consultaya@postgres:5432/consultaya_lecciones
     depends_on:
       postgres:
         condition: service_healthy
 
   progreso:
     environment:
-      DATABASE_URL: postgresql+psycopg://ca@postgres:5432/consultaya_progreso
+      DATABASE_URL: postgresql+psycopg://consultaya:consultaya@postgres:5432/consultaya_progreso
     depends_on:
       postgres:
         condition: service_healthy

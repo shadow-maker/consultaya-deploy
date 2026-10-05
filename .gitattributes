@@ -1,0 +1,7 @@
+# Normalización de saltos de línea (Mac, Linux y Windows).
+* text=auto
+# Los scripts de bash los usan Docker/WSL/EC2: siempre LF.
+*.sh text eol=lf
+*.sql text eol=lf
+# PowerShell: CRLF (con BOM UTF-8 para Windows PowerShell 5.1).
+*.ps1 text eol=crlf
