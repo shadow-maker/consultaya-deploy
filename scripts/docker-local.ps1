@@ -25,9 +25,10 @@
 .PARAMETER Help
   Muestra esta ayuda.
 #>
-[CmdletBinding()]
+# Sin [CmdletBinding()] ni [Parameter()]: así el script no es una función "avanzada" y PowerShell no
+# agrega los parámetros comunes. De lo contrario -Debug tendría el alias "db" y chocaría con -Db.
 param(
-  [Parameter(Position = 0)][string]$Comando,
+  [string]$Comando,
   [ValidateSet('host', 'container', 'auto')][string]$Db = 'auto',
   [switch]$BuildFront,
   [switch]$NoSeed,
