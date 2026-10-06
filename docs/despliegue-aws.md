@@ -21,6 +21,13 @@
 - **RDS consume créditos aunque no se use**: detenerla cuando no se necesite. AWS la vuelve a encender sola a los 7 días.
 - Las credenciales de la CLI vencen en cada sesión: copiarlas de "AWS Details → AWS CLI" a `~/.aws/credentials` cada vez que se use la CLI desde tu máquina.
 - Costo aproximado con todo encendido: EC2 t3.small ~US$0.021/h + RDS t3.micro ~US$0.018/h + Elastic IP ~US$0.005/h ≈ **US$1.1 por día**. S3 y CloudFront: centavos.
+- **Límites de RDS en el lab** (documento "AWS Academy Learner Lab – Foundation Services"):
+  - Instancias nano, micro, small y medium; motores Aurora, MySQL, PostgreSQL y MariaDB.
+  - Volúmenes EBS de hasta 100 GB, tipo General Purpose SSD (**gp2**).
+  - Solo clases de instancia **On-Demand** (no Serverless).
+  - **Multi-AZ no soportado**: elige la plantilla Dev/Test o Free tier y no crees una instancia standby.
+  - **Enhanced monitoring no soportado**: hay que desmarcarlo (viene activado por defecto).
+- **EC2:** el lab admite volúmenes gp2 y gp3 (la guía usa gp3 para la EC2).
 - Verificar al inicio que el lab permite **CloudFront**. Plan B si no: S3 *static website hosting* público + CORS en nginx para el origen del sitio, y el frontend usando la URL de la EC2.
 
 ## Paso 0 — Preparar valores
@@ -41,12 +48,16 @@ Generar y guardar (fuera de git):
 
 ## Paso 2 — RDS PostgreSQL
 
-Consola RDS → Create database:
-- Standard create, **PostgreSQL** (versión 16 o 17).
-- Plantilla Free tier / Dev-Test. Clase **`db.t3.micro`**, almacenamiento 20 GB gp3, sin autoscaling.
+> **Cuidado con la tarjeta "Create with express configuration".** La consola de RDS la muestra arriba y crea **Aurora PostgreSQL Serverless**. **No la uses**: Serverless no es una clase de instancia On-Demand (el lab solo admite esas) y es más cara para el presupuesto del lab.
+
+Consola RDS → **Databases → Create database** → **Standard create / Full configuration**:
+- Engine: **PostgreSQL** (no "Aurora (PostgreSQL Compatible)"), versión 16 o 17.
+- Plantilla **Free tier** o **Dev/Test**, **sin instancia standby** (Multi-AZ no está soportado en el lab; si la consola lo ofrece, elige "Do not create a standby instance").
+- Clase **`db.t3.micro`** (On-Demand). Almacenamiento **General Purpose SSD (gp2)**, 20 GB (el lab admite hasta 100 GB), sin autoscaling.
 - Identificador `consultaya-db`, usuario maestro `postgres_admin`, contraseña del paso 0.
 - VPC por defecto, **Public access: No**, SG `consultaya-rds-sg`.
-- Initial database name: (vacío). Backups: 1 día. Desactivar Performance Insights y Enhanced Monitoring.
+- Initial database name: (vacío). Backups: 1 día.
+- **Desmarca "Enable Enhanced monitoring"** (viene marcado por defecto y el lab no lo soporta). Desactiva también Performance Insights.
 - Anotar el **endpoint** (`consultaya-db.xxxx.us-east-1.rds.amazonaws.com`).
 
 ## Paso 3 — EC2

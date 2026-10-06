@@ -232,7 +232,7 @@ Guía completa paso a paso: [docs/despliegue-aws.md](docs/despliegue-aws.md) (re
 
 1. **Valores** (fuera de git): `JWT_SECRET` (`openssl rand -hex 48`) y una contraseña por servicio y para RDS (`openssl rand -base64 24 | tr -d '/+='`).
 2. **Security groups**: el compose de producción publica `80:80` y lo restringe el SG (nunca lo abras a `0.0.0.0/0`): EC2 con TCP 80 solo desde la prefix list de CloudFront (`com.amazonaws.global.cloudfront.origin-facing`) y 22 desde tu IP; RDS con 5432 solo desde el SG de la EC2.
-3. **RDS PostgreSQL** `db.t3.micro`, privada.
+3. **RDS PostgreSQL** `db.t3.micro`, privada, almacenamiento gp2. Usa *Standard create / Full configuration* con engine **PostgreSQL**: **no** uses la tarjeta "Create with express configuration" (crea Aurora Serverless, no soportada por el lab), elige Free tier o Dev/Test sin standby y desmarca Enhanced monitoring (ver la guía).
 4. **EC2** `t3.small` Amazon Linux 2023, `LabInstanceProfile`, user data = `scripts/bootstrap-ec2.sh`, Elastic IP.
 5. **Código en la EC2** (`/opt/consultaya`): clonar `consultaya-deploy`, `consultaya-usuarios`, `consultaya-lecciones` y `consultaya-progreso` en la misma carpeta.
 6. **Bases y usuarios**: copiar `scripts/init-rds.sql` a `/tmp/init.sql`, reemplazar las 3 `<PASSWORD_...>` y ejecutar `psql "host=<endpoint-rds> user=postgres_admin dbname=postgres sslmode=require" -f /tmp/init.sql`; luego borrar el archivo.
